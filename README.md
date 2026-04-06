@@ -187,3 +187,4 @@ The UI aims to feel calm, premium, and high-trust:
 The main goal is not perfect prediction. It is helping a user see the trade they are making before they drift into a default choice.
 # tradeoff
 # tradeoff
+# tradeoff
