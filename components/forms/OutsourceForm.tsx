@@ -2,7 +2,6 @@ import { PriorityAllocator } from "@/components/PriorityAllocator";
 import { FieldWrapper } from "@/components/ui/FieldWrapper";
 import { NumericField } from "@/components/ui/NumericField";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { SliderField } from "@/components/ui/SliderField";
 import type { OutsourceFormState } from "@/lib/form-types";
 import { getNumericError } from "@/lib/validation";
 
@@ -25,7 +24,6 @@ export function OutsourceForm({
     value.outsourceCost,
     "Outsource cost",
   );
-  const hourlyValueError = getNumericError(value.hourlyTimeValue, "Hourly value");
 
   return (
     <>
@@ -63,50 +61,33 @@ export function OutsourceForm({
         </FieldWrapper>
       </div>
 
-      <FieldWrapper
-        label="Professional efficiency"
-        hint="How much faster a professional would likely be than you."
-        optionalNote="1x to 5x"
-      >
-        <SliderField
-          min={1}
-          max={5}
-          step={0.5}
-          value={value.efficiencyMultiplier}
-          onChange={(nextValue) => onChange("efficiencyMultiplier", nextValue)}
-          valueLabel={`${value.efficiencyMultiplier}x`}
-          minLabel="same pace"
-          maxLabel="much faster"
-        />
-      </FieldWrapper>
-
       <div className="grid gap-4 rounded-[24px] border border-line/70 bg-white/58 p-4 sm:grid-cols-2 sm:p-5">
         <FieldWrapper
-          label="Coordination friction"
-          hint="Scheduling, texting, managing access, follow-up."
+          label="How often does this happen?"
+          hint="Recurring tasks justify more setup than one-off tasks."
         >
           <SegmentedControl
-            value={value.coordinationFriction}
-            onChange={(nextValue) => onChange("coordinationFriction", nextValue)}
+            value={value.frequency}
+            onChange={(nextValue) => onChange("frequency", nextValue)}
             options={[
-              { value: "low", label: "Low" },
-              { value: "medium", label: "Medium" },
-              { value: "high", label: "High" },
+              { value: "one-time", label: "One-time" },
+              { value: "occasional", label: "Occasional" },
+              { value: "recurring", label: "Recurring" },
             ]}
           />
         </FieldWrapper>
 
         <FieldWrapper
-          label="Would you miss doing it?"
-          hint="This captures whether the task holds some personal value."
+          label="How annoying is it to hand this off?"
+          hint="Think setup, access, texting, follow-up, and admin spillover."
         >
           <SegmentedControl
-            value={value.missDoingIt}
-            onChange={(nextValue) => onChange("missDoingIt", nextValue)}
+            value={value.handoffFriction}
+            onChange={(nextValue) => onChange("handoffFriction", nextValue)}
             options={[
-              { value: "hate-it", label: "Hate it" },
-              { value: "neutral", label: "Neutral" },
-              { value: "would-miss-it", label: "Would miss it" },
+              { value: "low", label: "Low" },
+              { value: "medium", label: "Medium" },
+              { value: "high", label: "High" },
             ]}
           />
         </FieldWrapper>
@@ -114,12 +95,27 @@ export function OutsourceForm({
 
       <div className="grid gap-4 rounded-[24px] border border-line/70 bg-white/58 p-4 sm:grid-cols-2 sm:p-5">
         <FieldWrapper
-          label="Identity relevance"
-          hint="Does doing this yourself feel important to who you are?"
+          label="Trust, privacy, or access barrier"
+          hint="For example: letting someone into your home or handing over account access."
         >
           <SegmentedControl
-            value={value.identityRelevance}
-            onChange={(nextValue) => onChange("identityRelevance", nextValue)}
+            value={value.trustBarrier}
+            onChange={(nextValue) => onChange("trustBarrier", nextValue)}
+            options={[
+              { value: "none", label: "None" },
+              { value: "some", label: "Some" },
+              { value: "high", label: "High" },
+            ]}
+          />
+        </FieldWrapper>
+
+        <FieldWrapper
+          label="Quality mismatch risk"
+          hint="How likely is it that you would still end up correcting or redoing part of it?"
+        >
+          <SegmentedControl
+            value={value.qualityRisk}
+            onChange={(nextValue) => onChange("qualityRisk", nextValue)}
             options={[
               { value: "low", label: "Low" },
               { value: "medium", label: "Medium" },
@@ -127,21 +123,68 @@ export function OutsourceForm({
             ]}
           />
         </FieldWrapper>
+      </div>
+
+      <div className="grid gap-4 rounded-[24px] border border-line/70 bg-white/58 p-4 sm:grid-cols-2 sm:p-5">
+        <FieldWrapper
+          label="How much personal value does doing it yourself have?"
+          hint="Treat active recovery and satisfaction as valid value, not just a cost."
+        >
+          <SegmentedControl
+            value={value.personalValue}
+            onChange={(nextValue) => onChange("personalValue", nextValue)}
+            options={[
+              { value: "hate-it", label: "Hate it" },
+              { value: "neutral", label: "Neutral" },
+              { value: "enjoy-it", label: "Enjoy it" },
+              { value: "would-miss-it", label: "Would miss it" },
+            ]}
+          />
+        </FieldWrapper>
 
         <FieldWrapper
-          label="Hourly time value"
-          hint="A practical estimate of what one hour of your time is worth."
-          error={hourlyValueError}
+          label="Would the time back be meaningfully usable?"
+          hint="Saved time only matters if it turns into real capacity."
         >
-          <NumericField
-            min={0}
-            step={1}
-            placeholder="50"
-            value={value.hourlyTimeValue}
-            onChange={(nextValue) => onChange("hourlyTimeValue", nextValue)}
-            prefix="$"
-            suffix="/hr"
-            invalid={Boolean(hourlyValueError)}
+          <SegmentedControl
+            value={value.timeUsefulness}
+            onChange={(nextValue) => onChange("timeUsefulness", nextValue)}
+            options={[
+              { value: "not-really", label: "Not really" },
+              { value: "somewhat", label: "Somewhat" },
+              { value: "yes", label: "Yes" },
+            ]}
+          />
+        </FieldWrapper>
+      </div>
+
+      <div className="grid gap-4 rounded-[24px] border border-line/70 bg-white/58 p-4 sm:grid-cols-2 sm:p-5">
+        <FieldWrapper
+          label="Is paying for this realistic right now?"
+          hint="Separate worth it from what your budget can comfortably absorb."
+        >
+          <SegmentedControl
+            value={value.budgetReality}
+            onChange={(nextValue) => onChange("budgetReality", nextValue)}
+            options={[
+              { value: "easy", label: "Easy" },
+              { value: "stretch", label: "Stretch" },
+              { value: "not-realistic", label: "Not realistic" },
+            ]}
+          />
+        </FieldWrapper>
+
+        <FieldWrapper
+          label="Could part of this be handed off?"
+          hint="Some tasks work better when only the worst part is outsourced."
+        >
+          <SegmentedControl
+            value={value.splitPotential}
+            onChange={(nextValue) => onChange("splitPotential", nextValue)}
+            options={[
+              { value: "no", label: "No" },
+              { value: "yes", label: "Yes" },
+            ]}
           />
         </FieldWrapper>
       </div>

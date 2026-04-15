@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   description:
     "Tradeoff is a calm decision tool that helps working professionals weigh time, money, friction, and what reclaimed time could become.",
   applicationName: "Tradeoff",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
   keywords: [
     "decision tool",
     "outsource or do it yourself",

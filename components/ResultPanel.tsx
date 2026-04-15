@@ -17,11 +17,11 @@ function PendingState({ readiness }: { readiness: ResultReadiness }) {
           Result pending
         </p>
         <h3 className="mt-3 font-display text-2xl text-ink">
-          Fill in a few more assumptions to see the trade clearly.
+          Add a few more details to get a read.
         </h3>
         <p className="mt-3 text-sm leading-7 text-ink/68">
-          Tradeoff only shows a recommendation once the basic inputs are
-          complete enough to support a reasonable comparison.
+          There needs to be enough here to compare the money cost with the time
+          cost.
         </p>
       </div>
 
@@ -57,7 +57,7 @@ function ReadyState({ result }: { result: DecisionResult }) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-              Primary recommendation
+              Best current read
             </p>
             <h3 className="mt-3 font-display text-2xl text-ink sm:text-[2rem]">
               {result.recommendation}
@@ -87,37 +87,55 @@ function ReadyState({ result }: { result: DecisionResult }) {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-[22px] bg-white/72 p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-ink/42">
-            Net money impact
+            {result.netMoneyEstimate.label}
           </p>
           <p className="mt-2 text-lg font-semibold text-ink">
             {result.netMoneyEstimate.display}
           </p>
           <p className="mt-2 text-sm leading-6 text-ink/62">
-            {result.netMoneyEstimate.label}
+            {result.netMoneyEstimate.context ?? "A practical money read for this choice."}
           </p>
         </div>
 
         <div className="rounded-[22px] bg-white/72 p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-ink/42">
-            Net time impact
+            {result.netTimeEstimate.label}
           </p>
           <p className="mt-2 text-lg font-semibold text-ink">
             {result.netTimeEstimate.display}
           </p>
           <p className="mt-2 text-sm leading-6 text-ink/62">
-            {result.netTimeEstimate.label}
+            {result.netTimeEstimate.context ?? "How the choice changes your time."}
           </p>
         </div>
 
         <div className="rounded-[22px] bg-white/72 p-4 sm:col-span-2 xl:col-span-1">
           <p className="text-xs uppercase tracking-[0.16em] text-ink/42">
-            What this time could go toward instead
+            What this time could go toward
           </p>
           <p className="mt-2 text-sm leading-6 text-ink/72">
             {result.opportunityCostSummary}
           </p>
         </div>
       </div>
+
+      {result.lenses?.length ? (
+        <div className="grid gap-3 lg:grid-cols-3">
+          {result.lenses.map((lens) => (
+            <div
+              key={lens.label}
+              className="rounded-[22px] border border-white/70 bg-white/64 p-4"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink/45">
+                {lens.label}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-ink/68">
+                {lens.summary}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="rounded-[22px] border border-white/70 bg-white/64 p-4 sm:p-5">
         <div className="flex items-center gap-3">
@@ -129,7 +147,7 @@ function ReadyState({ result }: { result: DecisionResult }) {
               Why
             </p>
             <p className="text-sm text-ink/62">
-              The engine uses explicit heuristics and a light hand with certainty.
+              Based on the inputs above.
             </p>
           </div>
         </div>
@@ -170,9 +188,8 @@ function ReadyState({ result }: { result: DecisionResult }) {
             Assumptions
           </p>
           <p className="mt-3 text-sm leading-7 text-ink/66">
-            This read depends most on your time estimate, hourly value, and the
-            rough savings or outsourcing cost you entered. It should be treated
-            as a framing tool, not a precise forecast.
+            This depends mostly on the time, cost, and savings numbers you
+            entered.
           </p>
         </div>
       )}
@@ -188,7 +205,7 @@ export function ResultPanel({ readiness, result }: Props) {
       <SectionHeader
         eyebrow="Step 4"
         title="Results"
-        description="The result updates from explicit heuristics and is phrased to surface the trade, not to overstate certainty."
+        description="Updates from the inputs on the left."
       />
 
       <div className="mt-5 transition-all duration-300">

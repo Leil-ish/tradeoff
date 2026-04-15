@@ -7,8 +7,8 @@ type CardProps = ComponentPropsWithoutRef<"div"> & {
 
 const toneClasses = {
   default: "border-white/70 bg-white/78",
-  muted: "border-line/70 bg-mist/88",
-  accent: "border-accent/20 bg-accent-soft/65",
+  muted: "border-line/70 bg-mist/84",
+  accent: "border-accent/18 bg-accent-soft/58",
 };
 
 export function Card({

@@ -77,7 +77,7 @@ export function PriorityAllocator({
       <div className="h-2 overflow-hidden rounded-full bg-sand">
         <div
           className={`h-full rounded-full transition-all duration-200 ${
-            remaining === 0 ? "bg-accent" : "bg-[#caa56a]"
+            remaining === 0 ? "bg-accent" : "bg-[#78a98e]"
           }`}
           style={{ width: `${Math.min((allocated / totalHours) * 100, 100)}%` }}
         />

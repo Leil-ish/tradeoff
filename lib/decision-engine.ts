@@ -1,12 +1,16 @@
 import type {
+  BarrierLevel,
+  BudgetRealityLevel,
   DealEnjoymentLevel,
   DealSearchFormState,
   FrictionLevel,
-  IdentityLevel,
-  MissDoingLevel,
   OutsourceFormState,
+  PersonalValueLevel,
   PriorityAllocation,
   PriorityCategory,
+  QualityRiskLevel,
+  TaskFrequency,
+  TimeUsefulnessLevel,
   UrgencyLevel,
 } from "@/lib/form-types";
 import type {
@@ -22,16 +26,41 @@ const COORDINATION_HOURS: Record<FrictionLevel, number> = {
   high: 0.75,
 };
 
-const MISS_DOING_HOURS: Record<MissDoingLevel, number> = {
-  "hate-it": 0.4,
-  neutral: 0,
-  "would-miss-it": -0.6,
+const FREQUENCY_SCORES: Record<TaskFrequency, number> = {
+  "one-time": -1,
+  occasional: 1,
+  recurring: 3,
 };
 
-const IDENTITY_HOURS: Record<IdentityLevel, number> = {
-  low: 0.25,
-  medium: 0,
-  high: -0.5,
+const PERSONAL_VALUE_SCORES: Record<PersonalValueLevel, number> = {
+  "hate-it": 2,
+  neutral: 0,
+  "enjoy-it": -1,
+  "would-miss-it": -3,
+};
+
+const TIME_USEFULNESS_SCORES: Record<TimeUsefulnessLevel, number> = {
+  "not-really": -2,
+  somewhat: 1,
+  yes: 3,
+};
+
+const BUDGET_SCORES: Record<BudgetRealityLevel, number> = {
+  easy: 1,
+  stretch: -1,
+  "not-realistic": -4,
+};
+
+const TRUST_SCORES: Record<BarrierLevel, number> = {
+  none: 0,
+  some: -2,
+  high: -5,
+};
+
+const QUALITY_SCORES: Record<QualityRiskLevel, number> = {
+  low: 0,
+  medium: -1,
+  high: -4,
 };
 
 const URGENCY_HOURS: Record<UrgencyLevel, number> = {
@@ -141,8 +170,8 @@ export function summarizeOpportunityAllocation(
 
   if (positiveHours < 0.1) {
     return framing === "spent"
-      ? "The time cost here is fairly small, so the opportunity cost is limited."
-      : "This choice does not materially change how much time you get back.";
+      ? "The time cost here is small."
+      : "This choice does not change your time much.";
   }
 
   const topSlices = getPrioritySlices(priorities, positiveHours).slice(0, 3);
@@ -152,33 +181,44 @@ export function summarizeOpportunityAllocation(
   const joinedParts = joinWithAnd(parts);
 
   if (framing === "reclaimed") {
-    return `That reclaimed time could become about ${joinedParts}.`;
+    return `That time could go to about ${joinedParts}.`;
   }
 
   if (framing === "preserved") {
-    return `Stopping here keeps about ${joinedParts} available for what you said matters most.`;
+    return `Stopping here keeps about ${joinedParts} available.`;
   }
 
-  return `Continuing likely asks you to spend about ${joinedParts} instead.`;
+  return `Continuing likely uses about ${joinedParts} instead.`;
 }
 
 function getOutsourceSensitivityNote(
-  score: number,
-  threshold: number,
-  hourlyTimeValue: number,
+  inputs: OutsourceFormState,
+  effectiveHourlyCost: number,
+  savedTimeHours: number,
+  recommendationState: string,
+  confidence: DecisionConfidence,
 ) {
-  if (Math.abs(score) > threshold * 1.6) {
+  if (confidence === "high") {
     return undefined;
   }
 
-  const priceSwing = Math.max(10, roundCurrency(Math.abs(score)));
-  const timeSwing = Math.max(0.25, roundHours(Math.abs(score) / Math.max(hourlyTimeValue, 1)));
+  if (recommendationState === "trial-outsource-for-1-month") {
+    return "This is promising, but still uncertain. A short trial is more reliable than trying to reason your way to certainty up front.";
+  }
 
-  return `This is fairly close. A quote moving by about ${formatCurrency(
-    priceSwing,
-  )}, or your time estimate shifting by about ${formatHours(
-    timeSwing,
-  )}, could change the answer.`;
+  if (recommendationState === "not-enough-clarity-yet") {
+    return `This looks close. A cleaner quote, or a more realistic read on whether ${formatHours(
+      savedTimeHours,
+    )} would become usable time, would likely change the answer.`;
+  }
+
+  if (inputs.budgetReality === "stretch") {
+    return "The logic leans one way, but the budget side is close enough that a modest price change could move this into a different recommendation.";
+  }
+
+  return `At roughly ${formatCurrency(
+    effectiveHourlyCost,
+  )} per hour saved, this depends a lot on whether the time back would actually feel usable in your week.`;
 }
 
 function getDealSensitivityNote(
@@ -193,7 +233,7 @@ function getDealSensitivityNote(
   const savingsSwing = Math.max(5, roundCurrency(Math.abs(expectedValue)));
   const timeSwing = Math.max(0.25, roundHours(Math.abs(expectedValue) / Math.max(hourlyTimeValue, 1)));
 
-  return `This is a close call. Another ${formatCurrency(
+  return `This is close. Another ${formatCurrency(
     savingsSwing,
   )} of likely savings, or about ${formatHours(
     timeSwing,
@@ -201,44 +241,47 @@ function getDealSensitivityNote(
 }
 
 function getOutsourceInsight(
+  recommendationState: string,
   inputs: OutsourceFormState,
-  comparisonScore: number,
-  diyTimeCost: number,
-  outsourceCostTotal: number,
   savedTimeHours: number,
 ) {
-  const closeThreshold = Math.max(18, inputs.hourlyTimeValue * 0.3);
-
-  if (Math.abs(comparisonScore) < closeThreshold) {
-    return "The economics are fairly close here, so your own preference likely matters more than the math alone.";
+  if (recommendationState === "money-is-the-actual-constraint") {
+    return "The issue is not whether help would be useful. It is that the current spend does not feel realistic.";
   }
 
-  if (
-    comparisonScore > closeThreshold &&
-    inputs.identityRelevance === "low" &&
-    inputs.missDoingIt !== "would-miss-it" &&
-    inputs.diyHours >= 2
-  ) {
-    return "This looks like a strong outsourcing candidate because it appears low-meaning, time-expensive, and fairly easy to hand off.";
+  if (recommendationState === "coordination-cost-cancels-the-savings") {
+    return "In theory this could save time, but the handoff work is eating too much of the gain.";
   }
 
-  if (
-    comparisonScore > closeThreshold &&
-    diyTimeCost > outsourceCostTotal * 1.4 &&
-    inputs.hourlyTimeValue >= 45
-  ) {
-    return "You appear to be trading fairly valuable personal time for a relatively modest cost difference.";
+  if (recommendationState === "outsource-it" && savedTimeHours >= 2) {
+    return "The case for handing this off is mostly about protecting recurring time, not chasing efficiency for its own sake.";
   }
 
-  if (
-    comparisonScore < -closeThreshold &&
-    (inputs.identityRelevance === "high" || inputs.missDoingIt === "would-miss-it")
-  ) {
-    return "This seems to carry enough personal value that keeping it yourself is about more than efficiency.";
+  if (recommendationState === "keep-doing-it-yourself") {
+    if (
+      inputs.personalValue === "enjoy-it" ||
+      inputs.personalValue === "would-miss-it"
+    ) {
+      return "Keeping it yourself is reasonable because the task has real personal value for you.";
+    }
+
+    return "Outsourcing does not look clean enough in real life to beat just doing it yourself.";
   }
 
-  if (comparisonScore > closeThreshold && savedTimeHours >= 2.5) {
-    return "The biggest thing in favor of outsourcing here is not just money, but the amount of time it would return to you.";
+  if (recommendationState === "outsource-only-the-worst-part") {
+    return "A split approach avoids forcing an all-or-nothing decision where neither option is great.";
+  }
+
+  if (recommendationState === "reduce-frequency") {
+    return "The problem may be the current cadence more than the task itself.";
+  }
+
+  if (recommendationState === "batch-it") {
+    return "You may get most of the benefit by doing this less often and with fewer starts and stops.";
+  }
+
+  if (recommendationState === "reduce-the-standard") {
+    return "The biggest win may be lowering the standard instead of paying someone else to maintain it.";
   }
 
   return undefined;
@@ -254,7 +297,7 @@ function getDealSearchInsight(
   const closeThreshold = Math.max(8, inputs.hourlyTimeValue * 0.2);
 
   if (Math.abs(expectedValue) < closeThreshold) {
-    return "This is close enough that your tolerance for delay and the appeal of searching likely matter more than a strict expected-value view.";
+    return "This is close enough that your own tolerance for more searching matters most.";
   }
 
   if (
@@ -262,7 +305,7 @@ function getDealSearchInsight(
     searchTimeCost > adjustedSavings &&
     inputs.hourlyTimeValue >= 40
   ) {
-    return "You appear to be spending fairly valuable time to chase savings that may not be large enough to justify the search.";
+    return "You may be spending too much time for the savings left here.";
   }
 
   if (
@@ -270,7 +313,7 @@ function getDealSearchInsight(
     recommendedSearchHours <= 0.25 &&
     adjustedSavings > 0
   ) {
-    return "There may still be a little value left in looking, but this is the kind of decision where a short search is usually enough.";
+    return "There may still be a little value left here, but this looks like a quick check, not a long search.";
   }
 
   if (
@@ -278,7 +321,7 @@ function getDealSearchInsight(
     inputs.urgency === "high" &&
     inputs.dealEnjoyment !== "enjoy-it"
   ) {
-    return "Urgency is doing real work here; the cost of delaying the decision seems to outweigh the likely upside from continued searching.";
+    return "Urgency matters more here than saving a little more.";
   }
 
   return undefined;
@@ -320,126 +363,294 @@ function getQuickSearchShare(searchHours: number) {
   return 0.3;
 }
 
+function getTaskBurdenScore(hours: number) {
+  if (hours < 1) {
+    return 0;
+  }
+
+  if (hours < 2) {
+    return 1;
+  }
+
+  if (hours < 3.5) {
+    return 2;
+  }
+
+  return 3;
+}
+
+function getEffectiveHourlyCostBand(value: number) {
+  if (value <= 18) {
+    return 2;
+  }
+
+  if (value <= 35) {
+    return 1;
+  }
+
+  if (value <= 60) {
+    return 0;
+  }
+
+  if (value <= 90) {
+    return -1;
+  }
+
+  return -3;
+}
+
+function getRecommendationLabel(state: string) {
+  switch (state) {
+    case "outsource-it":
+      return "Outsource it";
+    case "keep-doing-it-yourself":
+      return "Keep doing it yourself";
+    case "trial-outsource-for-1-month":
+      return "Trial outsource for 1 month";
+    case "outsource-only-the-worst-part":
+      return "Outsource only the worst part";
+    case "batch-it":
+      return "Batch it";
+    case "reduce-the-standard":
+      return "Reduce the standard";
+    case "reduce-frequency":
+      return "Reduce frequency";
+    case "redesign-the-system":
+      return "Redesign the system";
+    case "coordination-cost-cancels-the-savings":
+      return "Coordination cost cancels the savings";
+    case "money-is-the-actual-constraint":
+      return "Money is the actual constraint";
+    default:
+      return "Not enough clarity yet";
+  }
+}
+
+function getPresetRedesignState(inputs: OutsourceFormState) {
+  if (inputs.presetId === "grocery-delivery") {
+    return "batch-it";
+  }
+
+  if (
+    inputs.presetId === "house-cleaning" ||
+    inputs.presetId === "lawn-care" ||
+    inputs.presetId === "laundry"
+  ) {
+    return inputs.frequency === "recurring"
+      ? "reduce-frequency"
+      : "reduce-the-standard";
+  }
+
+  return "redesign-the-system";
+}
+
 function evaluateOutsourceDecision(
   inputs: OutsourceFormState,
 ): OutsourceDecisionResult {
-  const diyTimeCost = inputs.diyHours * inputs.hourlyTimeValue;
-  const coordinationHours = COORDINATION_HOURS[inputs.coordinationFriction];
-  const coordinationCost = coordinationHours * inputs.hourlyTimeValue;
-  const outsourceCostTotal = inputs.outsourceCost + coordinationCost;
-  const professionalTimeHours = inputs.diyHours / Math.max(inputs.efficiencyMultiplier, 1);
-
-  // Faster professional turnaround matters, but less than the user's own time value,
-  // so this is intentionally a modest bonus rather than a full second time calculation.
-  const turnaroundBonus =
-    Math.max(inputs.diyHours - professionalTimeHours, 0) *
-    inputs.hourlyTimeValue *
-    0.12;
-
-  // Preference adjustment keeps the recommendation from becoming a pure money-vs-time
-  // calculator. Low-identity, disliked work gets a small push toward outsourcing.
-  const preferenceAdjustment =
-    (MISS_DOING_HOURS[inputs.missDoingIt] +
-      IDENTITY_HOURS[inputs.identityRelevance]) *
-    inputs.hourlyTimeValue;
-
-  const comparisonScore =
-    diyTimeCost - outsourceCostTotal + turnaroundBonus + preferenceAdjustment;
-
-  const closeThreshold = Math.max(18, inputs.hourlyTimeValue * 0.3);
+  const coordinationHours = COORDINATION_HOURS[inputs.handoffFriction];
+  const outsourceCostTotal = inputs.outsourceCost;
   const savedTimeHours = Math.max(inputs.diyHours - coordinationHours, 0);
-  const confidence = getConfidence(comparisonScore, closeThreshold);
+  const effectiveHourlyCost = outsourceCostTotal / Math.max(savedTimeHours, 0.25);
 
-  const recommendation =
-    comparisonScore >= closeThreshold
-      ? "Outsource it"
-      : comparisonScore <= -closeThreshold
-        ? "Keep it yourself"
-        : comparisonScore >= 0
-          ? "Slight lean toward outsourcing"
-          : "Slight lean toward doing it yourself";
+  const practicalScore =
+    getTaskBurdenScore(inputs.diyHours) * 2 +
+    FREQUENCY_SCORES[inputs.frequency] +
+    TIME_USEFULNESS_SCORES[inputs.timeUsefulness] +
+    getEffectiveHourlyCostBand(effectiveHourlyCost) +
+    BUDGET_SCORES[inputs.budgetReality] +
+    TRUST_SCORES[inputs.trustBarrier] +
+    QUALITY_SCORES[inputs.qualityRisk] +
+    PERSONAL_VALUE_SCORES[inputs.personalValue] -
+    (inputs.handoffFriction === "high" ? 2 : inputs.handoffFriction === "medium" ? 1 : 0);
 
-  const summary =
-    comparisonScore >= 0
-      ? `Buying this back looks worthwhile if getting roughly ${formatHours(
-          savedTimeHours,
-        )} back would genuinely help right now.`
-      : `The savings from outsourcing do not clearly outweigh the cost, hassle, or personal value of keeping this in your own hands.`;
+  const feasibilityPenalty =
+    (inputs.trustBarrier === "high" ? 3 : 0) +
+    (inputs.qualityRisk === "high" ? 3 : 0) +
+    (inputs.budgetReality === "not-realistic" ? 3 : 0);
+  const mixedSignals =
+    (inputs.personalValue === "enjoy-it" || inputs.personalValue === "would-miss-it"
+      ? 1
+      : 0) +
+    (inputs.handoffFriction === "high" ? 1 : 0) +
+    (inputs.trustBarrier === "some" ? 1 : 0) +
+    (inputs.qualityRisk === "medium" ? 1 : 0) +
+    (inputs.timeUsefulness === "somewhat" ? 1 : 0);
+
+  let recommendationState = "not-enough-clarity-yet";
+
+  if (
+    inputs.budgetReality === "not-realistic" &&
+    practicalScore >= 2 &&
+    savedTimeHours >= 1
+  ) {
+    recommendationState = "money-is-the-actual-constraint";
+  } else if (
+    inputs.handoffFriction === "high" &&
+    savedTimeHours <= 1.25 &&
+    inputs.trustBarrier !== "high"
+  ) {
+    recommendationState = "coordination-cost-cancels-the-savings";
+  } else if (
+    inputs.trustBarrier === "high" ||
+    inputs.qualityRisk === "high"
+  ) {
+    recommendationState =
+      inputs.splitPotential === "yes" && inputs.personalValue !== "would-miss-it"
+        ? "outsource-only-the-worst-part"
+        : inputs.personalValue === "hate-it"
+          ? getPresetRedesignState(inputs)
+          : "keep-doing-it-yourself";
+  } else if (
+    practicalScore >= 6 &&
+    inputs.personalValue !== "would-miss-it" &&
+    inputs.budgetReality !== "not-realistic"
+  ) {
+    recommendationState =
+      mixedSignals >= 2 ? "trial-outsource-for-1-month" : "outsource-it";
+  } else if (
+    practicalScore >= 3 &&
+    inputs.splitPotential === "yes" &&
+    (inputs.personalValue === "enjoy-it" ||
+      inputs.handoffFriction === "medium" ||
+      inputs.qualityRisk === "medium")
+  ) {
+    recommendationState = "outsource-only-the-worst-part";
+  } else if (
+    practicalScore <= -2 ||
+    inputs.personalValue === "would-miss-it"
+  ) {
+    recommendationState = "keep-doing-it-yourself";
+  } else if (
+    inputs.frequency === "recurring" &&
+    inputs.personalValue === "hate-it" &&
+    inputs.budgetReality !== "easy"
+  ) {
+    recommendationState = getPresetRedesignState(inputs);
+  }
+
+  const confidence =
+    feasibilityPenalty >= 3 || mixedSignals >= 3
+      ? "low"
+      : practicalScore >= 7 || practicalScore <= -3
+        ? "high"
+        : "medium";
+
+  const recommendation = getRecommendationLabel(recommendationState);
+
+  const summaryMap: Record<string, string> = {
+    "outsource-it": `This looks worth handing off. The time burden is real, the task repeats enough to justify setup, and the practical barriers are low enough that help should create real relief.`,
+    "keep-doing-it-yourself": `Keeping this yourself looks more grounded than outsourcing it. Either the task has real personal value, or the handoff risks are high enough that paying for help would not feel clean in practice.`,
+    "trial-outsource-for-1-month": `The case for help is real, but not clean enough for a confident permanent call. A short trial is the safest way to see whether this actually removes work or just changes its shape.`,
+    "outsource-only-the-worst-part": `An all-or-nothing choice is too blunt here. The strongest move is to hand off the most draining part while keeping the parts where your standards or preferences matter most.`,
+    "batch-it": `The problem looks less like the task itself and more like how often it interrupts your week. A batching approach may recover most of the benefit without adding a service relationship.`,
+    "reduce-the-standard": `The current standard appears to be carrying more weight than the task really needs to. Lowering the bar slightly may beat either full DIY effort or full outsourcing.`,
+    "reduce-frequency": `This likely does not need to happen as often as it currently does. Reducing the cadence may solve more of the burden than outsourcing would.`,
+    "redesign-the-system": `The best answer here is probably not pure DIY or pure outsourcing. A system change would likely help more than pushing harder on the current setup.`,
+    "coordination-cost-cancels-the-savings": `The raw time math is not the real issue here. The setup, access, and follow-up burden are taking too much back for outsourcing to feel genuinely relieving.`,
+    "money-is-the-actual-constraint": `Handing this off may help in theory, but the budget side is the real blocker right now. That is different from the task not being worth help.`,
+    "not-enough-clarity-yet": `This is a close call with mixed signals. The right move depends on whether the time back would be meaningfully usable and whether the real-world handoff would stay manageable.`,
+  };
 
   const rationale = [
-    `Doing it yourself likely uses about ${formatCurrency(
-      diyTimeCost,
-    )} of your time at the hourly value you entered.`,
-    `Outsourcing comes out to about ${formatCurrency(
-      outsourceCostTotal,
-    )} once coordination friction is counted as time-equivalent cost.`,
-    inputs.efficiencyMultiplier > 1
-      ? `A professional working at about ${inputs.efficiencyMultiplier}x your pace improves the case for outsourcing, especially on turnaround.`
-      : `A professional is not meaningfully faster here, so speed does not add much benefit.`,
-    inputs.missDoingIt === "would-miss-it" || inputs.identityRelevance === "high"
-      ? "Because this task carries some personal or identity value for you, the engine discounts the case for outsourcing."
-      : "Because this task seems low-identity or actively disliked, the engine gives outsourcing a modest tilt.",
+    `Doing it yourself still takes about ${formatHours(inputs.diyHours)} each time.`,
+    `After handoff admin, the realistic time back is closer to ${formatHours(savedTimeHours)}.`,
+    `The current quote works out to about ${formatCurrency(
+      effectiveHourlyCost,
+    )} per hour saved.`,
+    inputs.timeUsefulness === "yes"
+      ? "That saved time looks usable enough to matter in real life."
+      : inputs.timeUsefulness === "somewhat"
+        ? "Some of the time back looks useful, but not all of it."
+        : "The time back does not look very reclaimable, which weakens the case for paying to save it.",
+    inputs.personalValue === "hate-it"
+      ? "You do not seem to get much personal value from doing this yourself."
+      : inputs.personalValue === "neutral"
+        ? "This task seems emotionally neutral, so practical tradeoffs matter more."
+        : "Doing this yourself appears to carry some real personal value.",
   ];
 
   const opportunityCostSummary =
-    comparisonScore >= 0
-      ? summarizeOpportunityAllocation(inputs.priorities, savedTimeHours, "reclaimed")
-      : `Keeping it yourself likely ties up about ${formatHours(
+    recommendationState === "keep-doing-it-yourself"
+      ? `Keeping it yourself still uses about ${formatHours(
           inputs.diyHours,
         )}. ${summarizeOpportunityAllocation(
           inputs.priorities,
           inputs.diyHours,
           "spent",
-        )}`;
+        )}`
+      : summarizeOpportunityAllocation(inputs.priorities, savedTimeHours, "reclaimed");
 
   return {
     mode: "outsource",
     inputs,
-    comparisonScore,
-    diyTimeCost,
+    comparisonScore: practicalScore,
+    diyTimeCost: effectiveHourlyCost * inputs.diyHours,
     outsourceCostTotal,
     savedTimeHours,
-    professionalTimeHours,
+    professionalTimeHours: 0,
     priorities: inputs.priorities,
+    recommendationState,
     recommendation,
-    summary,
+    summary: summaryMap[recommendationState],
     insightSummary: getOutsourceInsight(
+      recommendationState,
       inputs,
-      comparisonScore,
-      diyTimeCost,
-      outsourceCostTotal,
       savedTimeHours,
     ),
     rationale,
-    netMoneyEstimate:
-      comparisonScore >= 0
-        ? {
-            label: "Estimated spend to outsource",
-            value: -outsourceCostTotal,
-            display: formatSignedCurrency(-outsourceCostTotal),
-          }
-        : {
-            label: "Estimated spend avoided",
-            value: outsourceCostTotal,
-            display: formatSignedCurrency(outsourceCostTotal),
-          },
-    netTimeEstimate:
-      comparisonScore >= 0
-        ? {
-            label: "Time you likely get back",
-            value: savedTimeHours,
-            display: formatSignedHours(savedTimeHours),
-          }
-        : {
-            label: "Time this will likely take",
-            value: -inputs.diyHours,
-            display: formatSignedHours(-inputs.diyHours),
-          },
+    lenses: [
+      {
+        label: "Practical reality",
+        summary: `${inputs.frequency === "recurring" ? "Recurring" : "Limited"} burden with ${inputs.handoffFriction} handoff overhead and ${inputs.qualityRisk} mismatch risk.`,
+      },
+      {
+        label: "Psychological fit",
+        summary:
+          inputs.personalValue === "hate-it"
+            ? "This looks like draining maintenance, not meaningful DIY."
+            : inputs.personalValue === "neutral"
+              ? "This is mostly a practical decision rather than an identity one."
+              : "There is some non-economic value in keeping this in your own hands.",
+      },
+      {
+        label: "Feasibility",
+        summary:
+          inputs.budgetReality === "not-realistic"
+            ? "Budget is the main constraint right now."
+            : inputs.trustBarrier === "high"
+              ? "Trust or privacy concerns make full outsourcing weak."
+              : "No major hard blocker is showing up.",
+      },
+    ],
+    netMoneyEstimate: {
+      label: "Budget fit",
+      value:
+        inputs.budgetReality === "easy"
+          ? 2
+          : inputs.budgetReality === "stretch"
+            ? 1
+            : 0,
+      display:
+        inputs.budgetReality === "easy"
+          ? "Comfortable"
+          : inputs.budgetReality === "stretch"
+            ? "A stretch"
+            : "Not realistic",
+      context: `At the current quote of ${formatCurrency(outsourceCostTotal)}.`,
+    },
+    netTimeEstimate: {
+      label: "Real time back",
+      value: savedTimeHours,
+      display: formatSignedHours(savedTimeHours),
+      context: `After ${formatHours(coordinationHours)} of handoff work.`,
+    },
     opportunityCostSummary,
     sensitivityNote: getOutsourceSensitivityNote(
-      comparisonScore,
-      closeThreshold,
-      inputs.hourlyTimeValue,
+      inputs,
+      effectiveHourlyCost,
+      savedTimeHours,
+      recommendationState,
+      confidence,
     ),
     confidence,
   };
@@ -502,28 +713,28 @@ function evaluateDealSearchDecision(
       : 0;
 
   const summary = shouldKeepSearching
-    ? `There still appears to be enough value left in the search to justify roughly ${formatHours(
+    ? `There may still be enough here to justify roughly ${formatHours(
         inputs.searchHours,
-      )} more, but not much beyond that.`
+      )} more, but probably not much beyond that.`
     : shouldQuickSearch
-      ? `A brief search still makes sense, but the longer version of this search starts to work against the value of your time.`
-      : `At your stated time value, the likely savings do not justify continuing to search.`;
+      ? `A brief search is reasonable. Beyond that, the likely return starts to fall below the value of your time.`
+      : `The savings likely are not large enough to justify more searching.`;
 
   const rationale = [
-    `Expected savings compress to about ${formatCurrency(
+    `Likely savings compress to about ${formatCurrency(
       adjustedSavings,
-    )} after a simple diminishing-returns rule for longer searches.`,
-    `The search time itself costs about ${formatCurrency(
+    )} after applying a simple diminishing-returns rule for longer searches.`,
+    `The search itself costs about ${formatCurrency(
       searchTimeCost,
-    )} at your hourly value.`,
-    `Urgency adds about ${formatCurrency(
+    )} at the hourly value you gave your time.`,
+    `Delay adds about ${formatCurrency(
       delayCost,
-    )} of delay cost, which matters more when you need to decide soon.`,
+    )} here, which matters more when the purchase feels urgent.`,
     inputs.dealEnjoyment === "enjoy-it"
-      ? "Because you enjoy deal hunting, the engine gives searching a small positive adjustment, but not enough to override time cost on its own."
+      ? "Enjoying deal hunting helps a little, but not enough to outweigh time cost on its own."
       : inputs.dealEnjoyment === "hate-it"
-        ? "Because you dislike deal hunting, the engine modestly penalizes continued searching."
-        : "Enjoyment is treated as neutral here, so the search mostly stands or falls on time and savings.",
+        ? "Disliking deal hunting weakens the case for more searching."
+        : "This mostly comes down to time and savings.",
   ];
 
   const opportunityCostSummary =
@@ -539,8 +750,8 @@ function evaluateDealSearchDecision(
     shouldKeepSearching || shouldQuickSearch
       ? `Cap the search at about ${formatHours(
           recommendedSearchHours,
-        )}. Beyond that, the likely return drops below the value of your time.`
-      : "If a better option does not appear in the next 10 to 15 minutes, stop and buy with what you already know.";
+        )}. Beyond that, the likely return drops below what your time is worth.`
+      : "If a better option does not appear in the next 10 to 15 minutes, stop and buy.";
 
   return {
     mode: "deal-search",
@@ -564,7 +775,7 @@ function evaluateDealSearchDecision(
       label:
         recommendedSearchHours > 0
           ? "Likely savings still on the table"
-          : "Likely savings worth pursuing",
+          : "Likely savings",
       value: recommendedSavings,
       display: formatSignedCurrency(recommendedSavings),
     },
@@ -572,7 +783,7 @@ function evaluateDealSearchDecision(
       label:
         recommendedSearchHours > 0
           ? "Time the recommendation asks for"
-          : "Time you keep by stopping",
+          : "Time kept by stopping",
       value: recommendedSearchHours > 0 ? -recommendedSearchHours : inputs.searchHours,
       display: formatSignedHours(
         recommendedSearchHours > 0 ? -recommendedSearchHours : inputs.searchHours,

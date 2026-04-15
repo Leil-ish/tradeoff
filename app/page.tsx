@@ -104,8 +104,8 @@ export default function HomePage() {
 
   const assumptionsNote =
     mode === "outsource"
-      ? "Use realistic, slightly messy estimates. Honest approximations are more useful here than perfect numbers."
-      : "The likely savings field should reflect what you genuinely expect, not the best-case deal you might find.";
+      ? "Use the real version of this task, including handoff hassle and whether the time back would actually feel usable."
+      : "Use the savings you actually expect.";
 
   return (
     <main className="min-h-screen px-3 pb-14 pt-4 sm:px-5 sm:pb-20 sm:pt-7">
@@ -119,41 +119,44 @@ export default function HomePage() {
 
               <div className="space-y-3">
                 <h1 className="max-w-3xl font-display text-[2.3rem] leading-[1.02] text-ink sm:text-5xl lg:text-[4.25rem]">
-                  Make time, money, and what matters visible before you decide.
+                  Decide whether the savings are worth your time.
                 </h1>
                 <p className="max-w-2xl text-[15px] leading-7 text-ink/72 sm:text-lg sm:leading-8">
-                  A structured estimate for deciding whether to do it yourself,
-                  outsource it, or stop spending more time chasing a slightly
-                  better deal.
+                  Everyday maintenance tasks are real responsibilities. This
+                  helps you compare their money cost with their time cost, so
+                  you can see when a cheaper option is also the one that takes
+                  time away from your kids, hobbies, rest, or other priorities.
                 </p>
               </div>
             </div>
 
-            <Card tone="muted" className="p-4 sm:p-5">
+            <Card tone="muted" className="relative overflow-hidden p-4 sm:p-5">
+              <div className="pointer-events-none absolute -right-10 top-0 h-28 w-28 rounded-full bg-accent-soft/55 blur-2xl" />
               <div className="space-y-3">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-                  Product framing
+                  Why this exists
                 </p>
                 <p className="text-sm leading-7 text-ink/72 sm:text-base">
-                  Tradeoff is meant to clarify the decision, not overstate it.
-                  It turns rough assumptions into a visible trade between money,
-                  time, and what that time could become instead.
+                  Most people already know an hour with their kids or a Saturday
+                  hobby means more to them than dishwashing or chasing a small
+                  discount. This just puts that back on the screen while you
+                  decide.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-3xl bg-white/82 p-4">
+                  <div className="rounded-3xl border border-accent/10 bg-[linear-gradient(180deg,rgba(219,232,244,0.6),rgba(255,255,255,0.9))] p-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-ink/45">
-                      Looks at
+                      In the moment
                     </p>
                     <p className="mt-2 text-sm font-semibold text-ink">
-                      Time, money, hassle, and personal fit
+                      Your own effort is easy to undercount
                     </p>
                   </div>
-                  <div className="rounded-3xl bg-white/82 p-4">
+                  <div className="rounded-3xl border border-[#88b8a4]/20 bg-[linear-gradient(180deg,rgba(223,239,232,0.82),rgba(255,255,255,0.94))] p-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-ink/45">
-                      Reminder
+                      What this helps with
                     </p>
                     <p className="mt-2 text-sm font-semibold text-ink">
-                      No backend, no tracking, no black-box scoring
+                      Helps you make a choice that fits your priorities
                     </p>
                   </div>
                 </div>
@@ -167,7 +170,7 @@ export default function HomePage() {
             <SectionHeader
               eyebrow="Step 1"
               title="Choose the decision frame"
-              description="Start by telling Tradeoff what kind of choice you are trying to make."
+              description="Choose what you want help deciding."
             />
 
             <div className="mt-5">
@@ -193,12 +196,11 @@ export default function HomePage() {
 
             <div className="mt-5 rounded-[24px] border border-line/80 bg-white/78 p-4 sm:p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink/45">
-                What comes next
+                This mode compares
               </p>
               <p className="mt-3 text-sm leading-7 text-ink/68">
-                The form below adapts to this mode, seeds realistic defaults,
-                and then translates the time involved into the life categories
-                you said you want more of.
+                Cost, time, friction, and what that time would otherwise go
+                toward.
               </p>
             </div>
           </Card>
@@ -208,7 +210,7 @@ export default function HomePage() {
           <SectionHeader
             eyebrow="Step 2"
             title="Start from a realistic scenario"
-            description="Preset scenarios seed sensible defaults so the app feels fast, grounded, and easy to adjust."
+            description="Choose the closest starting point."
           />
 
           <ScenarioSelector
@@ -224,9 +226,8 @@ export default function HomePage() {
               {currentPreset?.label}
             </h3>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-ink/68">
-              {currentPreset?.summary} The preset gives you a credible starting
-              point, but you should edit anything that does not feel true to your
-              situation.
+              {currentPreset?.summary} The numbers for this scenario will fill
+              in below.
             </p>
           </div>
         </Card>
@@ -236,7 +237,7 @@ export default function HomePage() {
             <SectionHeader
               eyebrow="Step 3"
               title="Guided inputs"
-              description="Use approximate numbers you would actually stand behind. The tool only needs enough realism to make the trade visible."
+              description="Fill in the details for this situation."
             />
 
             <div className="mt-5 grid gap-4">
@@ -265,13 +266,11 @@ export default function HomePage() {
 
               <div className="rounded-[22px] border border-dashed border-line bg-mist/65 p-4">
                 <p className="text-sm leading-7 text-ink/65">
-                  Results are based on the assumptions above, not hidden data.
-                  Small changes can move a close call, which is why the app calls
-                  out sensitivity separately.
+                  Results update as you change the inputs.
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:flex-wrap">
+              <div className="no-print flex flex-col gap-3 pt-1 sm:flex-row sm:flex-wrap">
                 <Button
                   variant="ghost"
                   className="w-full sm:w-auto"

@@ -4,14 +4,12 @@ export const MODE_OPTIONS: ModeOption[] = [
   {
     id: "outsource",
     label: "Do it myself or outsource?",
-    description:
-      "Compare the hidden cost of doing a task yourself against paying someone else to take it off your plate.",
+    description: "Compare doing it yourself with paying someone else.",
   },
   {
     id: "deal-search",
     label: "Should I keep searching for a better deal?",
-    description:
-      "Pressure-test whether more searching is genuinely worth the time, attention, and delay it asks from you.",
+    description: "Check whether more searching is worth the time.",
   },
 ];
 
@@ -19,26 +17,26 @@ export const PRESET_OPTIONS: PresetOption[] = [
   {
     id: "house-cleaning",
     label: "House cleaning",
-    summary: "Recurring upkeep, energy drain, and the question of reclaiming a weekend block.",
+    summary: "Recurring cleaning with a meaningful time cost.",
   },
   {
     id: "lawn-care",
     label: "Lawn care",
-    summary: "Outdoor maintenance where cost, weather, and tolerance all matter.",
+    summary: "Routine yard work with weather and upkeep in the mix.",
   },
   {
     id: "grocery-delivery",
     label: "Grocery shopping vs delivery",
-    summary: "Errands, substitutions, fees, and how much bandwidth you want back.",
+    summary: "Errand time versus delivery fees.",
   },
   {
     id: "laundry",
     label: "Laundry",
-    summary: "A routine task that can feel grounding or quietly expensive in time.",
+    summary: "A repeating task that takes more time than it seems.",
   },
   {
     id: "deal-shopping",
     label: "Shopping for a deal on a product",
-    summary: "An open-ended search where savings, urgency, and diminishing returns collide.",
+    summary: "A product search where more time may or may not pay off.",
   },
 ];

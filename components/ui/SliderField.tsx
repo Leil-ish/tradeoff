@@ -45,7 +45,7 @@ export function SliderField({
         onChange={(event) => onChange(Number(event.target.value))}
         className="slider-thumb h-3 w-full cursor-pointer appearance-none rounded-full bg-line accent-accent touch-pan-x"
         style={{
-          background: `linear-gradient(to right, #1f6b63 0%, #1f6b63 ${progress}%, #d8d2c8 ${progress}%, #d8d2c8 100%)`,
+          background: `linear-gradient(to right, #2f5d8c 0%, #2f5d8c ${progress}%, #cad5e1 ${progress}%, #cad5e1 100%)`,
         }}
       />
 

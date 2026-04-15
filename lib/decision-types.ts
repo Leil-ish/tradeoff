@@ -10,13 +10,21 @@ export type DecisionMetric = {
   label: string;
   value: number;
   display: string;
+  context?: string;
+};
+
+export type DecisionLens = {
+  label: string;
+  summary: string;
 };
 
 export type DecisionResultBase = {
+  recommendationState?: string;
   recommendation: string;
   summary: string;
   insightSummary?: string;
   rationale: string[];
+  lenses?: DecisionLens[];
   netMoneyEstimate: DecisionMetric;
   netTimeEstimate: DecisionMetric;
   opportunityCostSummary: string;

@@ -82,7 +82,7 @@ export function DealSearchForm({
 
         <FieldWrapper
           label="Hourly time value"
-          hint="A practical estimate of what one hour of your time is worth."
+          hint="If you're stuck, ask: what would someone have to pay me to spend an hour on a mildly annoying task outside work?"
           error={hourlyValueError}
         >
           <NumericField

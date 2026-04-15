@@ -54,20 +54,14 @@ export function getResultReadiness(
   if (formState.mode === "outsource") {
     const hasCoreInputs =
       isNonNegativeNumber(formState.diyHours) &&
-      isNonNegativeNumber(formState.outsourceCost) &&
-      isNonNegativeNumber(formState.hourlyTimeValue);
+      isNonNegativeNumber(formState.outsourceCost);
 
     return {
-      isReady:
-        sharedChecks.every((item) => item.valid) &&
-        hasCoreInputs &&
-        Number.isFinite(formState.efficiencyMultiplier) &&
-        formState.efficiencyMultiplier >= 1 &&
-        formState.efficiencyMultiplier <= 5,
+      isReady: sharedChecks.every((item) => item.valid) && hasCoreInputs,
       missing: [
         ...sharedChecks,
         {
-          label: "Add realistic time, cost, and hourly value inputs",
+          label: "Add realistic time and cost inputs",
           valid: hasCoreInputs,
         },
       ],

@@ -18,11 +18,8 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
 }: SegmentedControlProps<T>) {
-  const gridColumnsClass =
-    options.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3";
-
   return (
-    <div className={`grid gap-3 ${gridColumnsClass}`.trim()}>
+    <div className="flex flex-wrap gap-3">
       {options.map((option) => {
         const isActive = option.value === value;
 
@@ -31,24 +28,24 @@ export function SegmentedControl<T extends string>({
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
-            className={`rounded-[24px] border px-4 py-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-4 ${
+            className={`min-h-[4.75rem] min-w-[8.5rem] flex-1 rounded-[24px] border px-4 py-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-4 ${
               isActive
                 ? "border-accent/30 bg-accent-deep text-white shadow-soft focus-visible:ring-accent/25"
-                : "border-line bg-white/72 text-ink hover:border-accent/30 hover:bg-white focus-visible:ring-ink/10"
+                : "border-line bg-white/76 text-ink hover:border-accent/25 hover:bg-[#fff8f4] focus-visible:ring-ink/10"
             }`}
           >
-            <div className="flex items-start gap-3">
+            <div className="flex h-full items-center gap-3">
               {option.icon ? (
                 <span
                   className={`mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl ${
-                    isActive ? "bg-white/14" : "bg-accent-soft/75 text-accent-deep"
+                    isActive ? "bg-white/14" : "bg-accent-soft/70 text-accent-deep"
                   }`}
                 >
                   {option.icon}
                 </span>
               ) : null}
-              <div className="space-y-1">
-                <div className="text-sm font-semibold">{option.label}</div>
+              <div className="min-w-0 space-y-1">
+                <div className="text-sm font-semibold leading-5">{option.label}</div>
                 {option.description ? (
                   <p
                     className={`text-sm leading-6 ${
